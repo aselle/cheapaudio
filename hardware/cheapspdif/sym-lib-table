@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name wm8805)(type Legacy)(uri ${KIPRJMOD}/wm8805.lib)(options "")(descr ""))
+  (lib (name spdif-rescue)(type Legacy)(uri ${KIPRJMOD}/spdif-rescue.lib)(options "")(descr ""))
+)
