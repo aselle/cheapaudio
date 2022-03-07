@@ -11,8 +11,23 @@ Software is extremely rough, mostly used for my own purposes. Use at your own ri
 
 ### Hardware
 
-  * CheapDSP - ADAU1701 based DSP board
-  * CheapAMP - TI TAS 5754M Amp
+#### CheapDSP - ADAU1701 based DSP board
+
+![DSP Image](docs/images/cheapdsp_render.png)
+
+
+
+
+#### CheapAMP - TI TAS 5754M Amp
+
+![Amp Image](docs/images/cheapaudio_amp_render.png)
+
+#### CheapSPDIF - SPDIF to i2s supported by wolfsen chip
+
+![SPDIFAImage](docs/images/cheapskate_spdif_render.png)
+
+
+
 
 One thing that I've done uniquely with these is that I have used skidl to design the circuit using python script. This has the downside that there is no hardware schematic, only a PCB layout.
 
