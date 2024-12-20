@@ -13,7 +13,9 @@
 // limitations under the License
 
 import React from "react";
+import globalHook from "use-global-hook";
 import useGlobalHook from "use-global-hook";
+
 
 // TODO: This is not the "right" way.
 var currentJson = null;
@@ -41,7 +43,9 @@ function UploadCurrentJson() {
 // https://medium.com/javascript-in-plain-english/state-management-with-react-hooks-no-redux-or-context-api-8b3035ceecf8
 
 const initial = {
-    "stat": "unpopulated"
+    aux: false,
+    counter: 0,
+    json: null
 };
 
 // Convert float to integer 5.23 fixed point.
@@ -72,9 +76,21 @@ function transferParam(param) {
 }
 
 const actions = {
+    setAux: (store, val) => {
+
+        store.setState({aux: val})
+        console.log("AUX SET ", store.state.aux)
+    },
+    addToCounter: (store, amount) => {
+        const newCounterValue = store.state.counter + amount;
+        store.setState({ counter: newCounterValue });
+
+        console.log("WOOT!", store.state.counter)
+      },
+
     get: (store) => {
         console.log(store);
-        if(store.state["stat"] === "unpopulated") {
+        if(store.state.json === null) {
             fetch('/boot.json')
             .then(function(response) {
                 return response.json();
@@ -88,14 +104,16 @@ const actions = {
                 for(var i = 0; i < modules.length; i++) {
                     // TODO(aselle): Handle more algorithms
                     var params = modules[i].algorithms[0].params;
-                    console.log(modules[i],params, params.length);
+                    //console.log(modules[i],params, params.length);
                     for(var j = 0; j < params.length; j++) {
                         // TODO(aselle): Check for duplicates.
-                        console.log(j, params[j]);
+                        //console.log(j, params[j]);
                         nameToParam[params[j].Name] = params[j];
                     }
                 }
+                console.log("about to store...")
                 store.setState({"json": json, "stat": "good", "nameToParam": nameToParam});
+                console.log("stored!")
                 currentJson = json;
 
             })
@@ -106,7 +124,7 @@ const actions = {
     },
     setFloatParam: (store, paramName, wordAddr, value) => {
         const byteAddr = wordAddr * 4;
-        console.log(store);
+        //console.log(store);
         var json = store.state.json;
         // TODO(aselle): Handle more ics
         var progs = json.ics[0].progs;
@@ -134,7 +152,7 @@ const actions = {
                 param.Data = bytes;
                 console.log(param);
                 // TODO(aselle): Transmit
-                transferParam(param);
+                //transferParam(param);
 
             }
         }
@@ -142,10 +160,18 @@ const actions = {
 
 };
 
-const useGlobal = useGlobalHook(React, initial, actions);
+// const Store = () => {
+//     const [globalState, globalActions] = useGlobal();
+// }
+
+// TODO what is htis
+// const useGlobal = useGlobalHook(React, initial, actions);
+const useGlobal = globalHook(initial, actions);
+
 
 //var my_store, my_act = useGlobal((s) => null);
 
 
 export {UploadJson, UploadCurrentJson};
 export default useGlobal;
+

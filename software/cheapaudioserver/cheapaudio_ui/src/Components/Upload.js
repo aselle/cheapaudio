@@ -15,7 +15,7 @@ import React, { Component } from 'react'
 import Dropzone from 'react-dropzone';
 import {UploadJson} from '../Data/store'
 
-var util = require('util');
+// var util = require('util');
 var xml2js = require('xml2js');
 
 const dropzoneStyle = {
