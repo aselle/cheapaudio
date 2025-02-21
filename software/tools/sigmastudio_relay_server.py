@@ -57,8 +57,9 @@ def ConnManager(conn):
 class DSP:
     def __init__(self):
         self.sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect(("192.168.1.126", 23))
-        
+        #self.sock.connect(("192.168.1.126", 23))
+        self.sock.connect(("10.0.0.139", 23))
+
         self.data_to_send = []
         t = threading.Thread(target=self.recv_loop, args=tuple())
         t.start()
@@ -90,7 +91,11 @@ class DSP:
             
 dsp = DSP()
 
-        
+ADAU1466="ADAU1466"
+ADAU1452="ADAU1452"
+mode = ADAU1452
+
+format_hex = lambda bs: "".join("0x%02x " % b for b in bs)
         
 with socketcontext(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT))
@@ -101,18 +106,31 @@ with socketcontext(socket.AF_INET, socket.SOCK_STREAM) as s:
         while True:
             code = conn.recv(1)
             if code[0] == 0x09:
-                header = conn.recv(9)
-                for item in header:
-                    print (" 0x%02x"%item, end=''),
-                print(" ")
-                safe, channel, packet_size, chip_addr, data_size, addr = struct.unpack(
-                    "!BBHBHH", header)
-                print ("Write Size %08x bytes chip %02x data size %04x  addr %04x"%(packet_size, chip_addr, data_size, addr))
-                bytes_needed = data_size
-                data = bytes()
-                while bytes_needed > 0:
-                    data += conn.recv(bytes_needed)
-                    bytes_needed -= len(data)
+                if mode == ADAU1452:
+                    header = conn.recv(13)
+                    safe, channel, packet_size, chip_addr, data_size, addr = struct.unpack("!BBIBIH", header)
+                    print ("ADAU1452 Write Size %08x bytes chip %02x data size %04x  addr %04x"%(packet_size, chip_addr, data_size, addr))
+                    bytes_needed = data_size
+                    data = bytes()
+                    while bytes_needed > 0:
+                        data += conn.recv(bytes_needed)
+                        bytes_needed -= len(data)
+                    
+                    print("Send addr=0x%x size=%d data=%s" % (addr, data_size, format_hex(data)))    
+                else:
+                    header = conn.recv(9)
+                    for item in header:
+                        print (" 0x%02x"%item, end=''),
+                    print(" ")
+                    safe, channel, packet_size, chip_addr, data_size, addr = struct.unpack(
+                        "!BBHBHH", header)
+                    print ("Write Size %08x bytes chip %02x data size %04x  addr %04x"%(packet_size, chip_addr, data_size, addr))
+                    bytes_needed = data_size
+                    data = bytes()
+                    while bytes_needed > 0:
+                        data += conn.recv(bytes_needed)
+                        bytes_needed -= len(data)
+                    print("Send addr=0x%x size=%d data=" % (addr, data_size, format_hex(data)))    
                 dsp.send_to_dsp(safe, addr, data_size, data)
             elif code[0] == 0x0a:
                 # TTODO fix this
