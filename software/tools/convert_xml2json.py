@@ -57,7 +57,7 @@ def convertHelper(curr, depth):
         compacted = convertHelper(child, depth + 1)
         if child.tag == "Size": child.tag = "0Size"
         if child.tag == "Address": child.tag = "0Address"
-        if child.tag == "Name": child.tag = "0Name"
+        #if child.tag == "Name": child.tag = "0Name"
 
         if child.tag == "Data":
             items = ["%02x" % int(x, 16) for x in compacted.split(",") if x.strip() != '']

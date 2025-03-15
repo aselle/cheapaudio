@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import {produce} from "immer"
+import {filter_object_to_biquad, crossover_object_to_biquad} from "./biquad"
 
 
 // Convert float to integer 5.23 fixed point.
@@ -18,6 +19,22 @@ function hexToFloat(val) {
   }
 }
 
+const toHex = (num) => {
+  return (num >>> 0).toString(16).toUpperCase().padStart(8, '0');
+};
+
+function program_biquad(param, index, biquads) {
+  const addr = param.Address + index * 5 
+  const size = 5 * 4  // 5 biquads coeff *  4 bytes / coeff
+  var pay = []
+  var biquads2 = [biquads[4],biquads[3],biquads[2],biquads[1],biquads[0]]
+  var hex2 = biquads2.map(floatToHex).map(toHex)
+  
+  const ret = {name: param.Name, block: param.block, index: index, addr: addr, size:size, data:hex2.reduce((acc, curr) => acc + curr)}
+  console.log(param, ret);
+  return ret;
+}
+
 export const fetchJson = createAsyncThunk('jsonslice/fetchJson', () => {
   console.log("starting fetch of boot.json")
   return fetch('/boot.json')
@@ -25,15 +42,66 @@ export const fetchJson = createAsyncThunk('jsonslice/fetchJson', () => {
   .then(data=>data)
 })
 
+
+
 export const jsonslice = createSlice({
   name: 'jsonslice',
   initialState: {
     value: null,
+    edits: [],
   },
   reducers: {
     getJson: (state) => {
     },
+    updateXover: (state, {name, payload}) => {
+      var paramName = payload.name;
+      var key = payload.key;
+      var value = payload.value;
+      if(payload.create) {
+        state.nameToCleanParam[paramName].Filter = {type: "bypass", frequency: 1000, pass: "lowpass"}
+        return state
+      } else {
+        state.nameToCleanParam[paramName].Filter[key] = value
+      }
+      var biquads = crossover_object_to_biquad(state.nameToCleanParam[paramName].Filter)
+      console.log("biquads are now ", biquads);
+      state.nameToCleanParam[paramName].Filters = [];
+      for(var i=0; i<biquads.length; i++) {
+        state.nameToCleanParam[paramName].Filters.push({biquad:biquads[i]})
+        state.edits.push(program_biquad(state.nameToCleanParam[paramName], i, biquads[i]));
+      }
+      console.log("edits!", state.edits.length)
+
+      return state
+    },
+    updateFilter: (state, {name, payload}) => {
+      var paramName = payload.name;
+      if(payload.create==true) {
+        console.log("CREATING!")
+        //state.nameToCleanParam[paramName].Filters.length = state.nameToCleanParam[paramName].Biquads // [index] = null
+        state.nameToCleanParam[paramName].Filters[payload.index] = {"q": 1.0, "type": "peaking", "boost": 0.0, "gain": 0.0, "frequency": 100, "bypass": true}
+        
+        return state;
+      } else {
+      var index = payload.index
+        var attr = payload.key;
+        var value = payload.value;
+        
+        //state.nameToCleanParam = produce(state.nameToCleanParam, draft=>{draft[paramName] = {...draft[paramName], attr:value}})
+        //var curr = state.nameToCleanParam[paramName]; 
+        state.nameToCleanParam[paramName].Filters[index][attr] = value
+
+        var quads = filter_object_to_biquad(state.nameToCleanParam[paramName].Filters[index])
+        state.edits.push(program_biquad(state.nameToCleanParam[paramName], index, quads));
+        console.log("edits!", state.edits.length)
+
+        state.nameToCleanParam[paramName].Filters[index].biquad = quads;
+        return state;
+      }
+    },
+
     setFloatParam: (state, {name, payload}) => {
+      console.log("SETTING ", name, payload)
       var wordAddr = payload.addr;
       var value = payload.value;
       var paramName = payload.name;
@@ -46,9 +114,11 @@ export const jsonslice = createSlice({
       var param = state.nameToParam[paramName];
       console.log("par", JSON.stringify(param))
 
-      for(var i = 0; i < progs.length; i++){
-          var prog = progs[i];
-          if(prog.Name === "Param") {
+      //for(var i = 0; i < progs.length; i++){
+      //    var prog = progs[i];
+      //    console.log(prog.Name)
+      //    if(prog.Name === "Param" || prog.Name === "params") {
+            console.log("MATCHING")
               var padHex = (x) => {
                   return ("0" + x.toString(16)).substr(-2);
               }
@@ -70,8 +140,8 @@ export const jsonslice = createSlice({
                   console.log("now it is", state.nameToParam[paramName])
                 }
               }
-            }
-        }
+        //    }
+        //}
         return state;
       }
   },
@@ -83,6 +153,7 @@ export const jsonslice = createSlice({
     .addCase(fetchJson.fulfilled, (state, action) => {
       console.log("AWOOT!")
       var nameToParam = {}
+      var nameToCleanParam = {}
       var json = action.payload;
       console.log("pay", action.payload)
       if(json == undefined) return;
@@ -97,15 +168,21 @@ export const jsonslice = createSlice({
               nameToParam[params[j].Name] = params[j];
           }
       }
-      console.log("About to store")
-      console.log(nameToParam)
-      state.json =  json
-      state.nameToParam = nameToParam
+      var clean = json.ics[0].clean_params;
+      for(var i = 0; i < clean.length; i++) {
+        nameToCleanParam[clean[i].Name] = clean[i];
+      }
+      console.log("About to store", nameToCleanParam)
+      console.log(nameToParam);
+      state.json =  json;
+      state.nameToParam = nameToParam;
+      state.nameToCleanParam = nameToCleanParam;
+      state.edits = [];
     })
   }
 })
 
 // Action creators are generated for each case reducer function
-export const { getJson, setFloatParam } = jsonslice.actions
+export const { getJson, setFloatParam, updateFilter, updateXover } = jsonslice.actions
 
 export default jsonslice.reducer

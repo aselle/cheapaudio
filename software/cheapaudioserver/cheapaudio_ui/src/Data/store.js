@@ -107,7 +107,7 @@ const actions = {
                     //console.log(modules[i],params, params.length);
                     for(var j = 0; j < params.length; j++) {
                         // TODO(aselle): Check for duplicates.
-                        //console.log(j, params[j]);
+                        console.log("build nameToParam", j, params[j]);
                         nameToParam[params[j].Name] = params[j];
                     }
                 }
@@ -123,6 +123,7 @@ const actions = {
         }
     },
     setFloatParam: (store, paramName, wordAddr, value) => {
+        console.log("SET FLOAT PARAM ", paramName, wordAddr, value)
         const byteAddr = wordAddr * 4;
         //console.log(store);
         var json = store.state.json;

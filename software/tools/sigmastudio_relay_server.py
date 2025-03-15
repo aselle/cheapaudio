@@ -89,7 +89,7 @@ class DSP:
             #    print("sock: " + i.decode('UTF-8'))
             data = items[-1]
             
-dsp = DSP()
+dsp =  None # DSP()
 
 ADAU1466="ADAU1466"
 ADAU1452="ADAU1452"
@@ -131,7 +131,7 @@ with socketcontext(socket.AF_INET, socket.SOCK_STREAM) as s:
                         data += conn.recv(bytes_needed)
                         bytes_needed -= len(data)
                     print("Send addr=0x%x size=%d data=" % (addr, data_size, format_hex(data)))    
-                dsp.send_to_dsp(safe, addr, data_size, data)
+                if dsp: dsp.send_to_dsp(safe, addr, data_size, data)
             elif code[0] == 0x0a:
                 # TTODO fix this
                 print (len(code))
